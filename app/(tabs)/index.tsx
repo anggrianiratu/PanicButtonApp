@@ -107,6 +107,7 @@ export default function HomeScreen() {
 
   const [isNotifVisible, setIsNotifVisible] = useState(false);
   const [pushNotifications, setPushNotifications] = useState<AppNotification[]>([]);
+  const [hasUnread, setHasUnread] = useState(false);
 
   const progressWidth = useRef(new Animated.Value(100)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -316,6 +317,7 @@ export default function HomeScreen() {
     const newNotif: AppNotification = { id: `NOTIF-${timestamp}`, title, body, time, timestamp };
 
     setPushNotifications(prev => [newNotif, ...prev]);
+    setHasUnread(true); // ← tambahkan ini
   };
 
   const executeSendSOS = async () => {
@@ -409,9 +411,15 @@ export default function HomeScreen() {
           <Text style={styles.topbarGreeting}>Halo, <Text style={styles.topbarName}>{namaUser}</Text></Text>
         </View>
 
-        <TouchableOpacity style={styles.topbarIcon} onPress={() => setIsNotifVisible(true)}>
+        <TouchableOpacity 
+          style={styles.topbarIcon} 
+          onPress={() => {
+            setIsNotifVisible(true);
+            setHasUnread(false);
+          }}
+        >
           <Bell size={24} color="#334155" />
-          {pushNotifications.length > 0 && <View style={styles.notifDot} />}
+          {hasUnread ? <View style={styles.notifDot} /> : null}
         </TouchableOpacity>
       </View>
 

@@ -1,6 +1,6 @@
 import { Picker } from '@react-native-picker/picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, PenSquare, Trash2 } from 'lucide-react-native';
+import { ArrowLeft, Trash2 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
@@ -219,9 +219,6 @@ export default function ContactFormScreen() {
         <View style={styles.avatarPreview}>
           <View style={styles.avatarCircle}>
             <Text style={styles.avatarText}>{initials}</Text>
-            <View style={styles.avatarEdit}>
-              <PenSquare size={10} color="#fff" />
-            </View>
           </View>
         </View>
 
@@ -309,7 +306,6 @@ const styles = StyleSheet.create({
   avatarPreview: { flexDirection: 'row', justifyContent: 'center', marginBottom: 24 },
   avatarCircle: { width: 72, height: 72, borderRadius: 36, backgroundColor: '#fee2e2', alignItems: 'center', justifyContent: 'center', position: 'relative' },
   avatarText: { color: '#b91c1c', fontSize: 22, fontWeight: '600' },
-  avatarEdit: { position: 'absolute', bottom: 0, right: 0, width: 22, height: 22, borderRadius: 11, backgroundColor: '#B91C1C', alignItems: 'center', justifyContent: 'center' },
   field: { marginBottom: 16 },
   fieldLabel: { fontSize: 11, fontWeight: '600', color: '#888', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 },
   fieldInput: { width: '100%', paddingVertical: 12, paddingHorizontal: 14, borderWidth: 1.5, borderColor: '#f0f0f0', borderRadius: 10, fontSize: 14, color: '#1a1a1a', backgroundColor: '#fafafa' },
