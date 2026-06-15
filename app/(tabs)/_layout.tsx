@@ -1,35 +1,38 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
-
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+// app/(tabs)/_layout.tsx
+import { Redirect, Tabs } from 'expo-router';
+import { History, Home, ShieldAlert, User } from 'lucide-react-native';
+import { ActivityIndicator, View } from 'react-native';
+import { useAuth } from '../context/AuthContext'; // Sesuaikan path-nya
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  const { session, isLoading } = useAuth();
+
+  // Jika masih loading (mengecek sesi), tampilkan loading indicator
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#B91C1C" />
+      </View>
+    );
+  }
+
+  // Jika tidak ada session, arahkan ke halaman login
+  if (!session) {
+    return <Redirect href="/login" />;
+  }
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        tabBarActiveTintColor: '#B91C1C',
+        tabBarInactiveTintColor: '#aaa',
         headerShown: false,
-        tabBarButton: HapticTab,
+        // ... sisa kode style Anda tetap sama
       }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="explore"
-        options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
-        }}
-      />
+      <Tabs.Screen name="index" options={{ title: 'Beranda', tabBarIcon: ({ color }) => <Home color={color} size={20} /> }} />
+      <Tabs.Screen name="contact" options={{ title: 'Kontak', tabBarIcon: ({ color }) => <ShieldAlert color={color} size={20} /> }} />
+      <Tabs.Screen name="history" options={{ title: 'Riwayat', tabBarIcon: ({ color }) => <History color={color} size={20} /> }} />
+      <Tabs.Screen name="profile" options={{ title: 'Profil', tabBarIcon: ({ color }) => <User color={color} size={20} /> }} />
     </Tabs>
   );
 }
