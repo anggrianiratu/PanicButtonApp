@@ -4,13 +4,13 @@ import React, { useCallback, useState } from 'react';
 import {
   FlatList,
   Platform,
-  SafeAreaView,
   StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { fetchContacts } from '../database/repository';
 
 // Interface disesuaikan dengan tipe kolom SQLite Anda

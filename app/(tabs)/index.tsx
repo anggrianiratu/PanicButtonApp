@@ -7,7 +7,6 @@ import {
   FlatList,
   Linking,
   Modal,
-  SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -29,6 +28,7 @@ import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 import * as SMS from 'expo-sms';
 
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { addHistory, fetchContacts, fetchUserProfile } from '../database/repository';
 

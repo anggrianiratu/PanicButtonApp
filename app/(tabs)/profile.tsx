@@ -20,7 +20,6 @@ import {
   Linking,
   Modal,
   Platform,
-  SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -31,6 +30,7 @@ import {
 } from 'react-native';
 
 // INTEGRASI SUPABASE
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase'; // <-- PASTIKAN PATH INI SESUAI DENGAN LOKASI SUPABASE CLIENT ANDA
 import { useAuth } from '../context/AuthContext';
 import { fetchUserProfile } from '../database/repository';

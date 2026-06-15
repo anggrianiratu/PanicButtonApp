@@ -4,7 +4,6 @@ import React, { useCallback, useMemo, useState } from 'react';
 import {
   Modal,
   Platform,
-  SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -14,6 +13,7 @@ import {
 } from 'react-native';
 
 // INTEGRASI SUPABASE
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../database/supabaseClient';
 

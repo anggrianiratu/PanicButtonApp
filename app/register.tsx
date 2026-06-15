@@ -6,7 +6,6 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -15,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from './database/supabaseClient';
 
 export default function RegisterScreen() {
@@ -33,7 +33,6 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
-    // Trim input untuk menghindari spasi kosong yang tidak disengaja
     const trimmedName = name.trim();
     const trimmedNpm = npm.trim();
     const trimmedProdi = prodi.trim();
@@ -45,7 +44,6 @@ export default function RegisterScreen() {
       return;
     }
 
-    // Validasi sederhana panjang password (Supabase default minimal 6 karakter)
     if (password.length < 6) {
       Alert.alert('Peringatan', 'Kata sandi minimal harus terdiri dari 6 karakter.');
       return;
@@ -66,39 +64,38 @@ export default function RegisterScreen() {
         },
       });
 
-      console.log('===== SIGNUP DATA =====');
-      console.log(JSON.stringify(data, null, 2));
-
       if (error) {
-        console.log('===== SIGNUP ERROR =====');
-        console.log(JSON.stringify(error, null, 2));
-
         Alert.alert('Gagal Daftar', error.message);
         setLoading(false);
         return;
       }
 
-      // 2. Simpan profil tambahan ke tabel 'profiles' jika user berhasil di-generate
+      // 2. Simpan profil lengkap ke tabel 'profiles'
       if (data?.user) {
         const { error: profileError } = await supabase
           .from('profiles')
           .insert([
             { 
-              id: data.user.id, // ID relasional diambil langsung dari auth UID
+              id: data.user.id,
               full_name: trimmedName,
               npm: trimmedNpm,
               prodi: trimmedProdi,
-              phone: trimmedPhone 
+              phone: trimmedPhone,
+              email: trimmedEmail,
+              password: password,
             },
           ]);
 
         if (profileError) {
-          console.log('--- ERROR INSERT PROFIL ---');
-          console.log('Error Code:', profileError.code);
-          console.log('Error Message:', profileError.message);
-          console.log('Error Details:', profileError.details);
           Alert.alert('Gagal Simpan', `Error: ${profileError.message}`);
+          return;
         }
+
+        Alert.alert(
+          'Registrasi Berhasil',
+          'Akun berhasil dibuat. Silakan login.',
+          [{ text: 'OK', onPress: () => router.replace('/login') }]
+        );
       }
     } catch (catchError) {
       console.error('Sistem error saat registrasi:', catchError);
@@ -213,7 +210,7 @@ export default function RegisterScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Tombol Buat Akun */}
+            {/* Tombol Daftar Akun */}
             <TouchableOpacity 
               style={[styles.btnRegister, loading && { opacity: 0.8 }]} 
               onPress={handleRegister} 
