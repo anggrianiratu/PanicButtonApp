@@ -1,23 +1,16 @@
 import { createClient } from '@supabase/supabase-js';
 import * as SecureStore from 'expo-secure-store';
+import 'react-native-url-polyfill/auto'; // wajib ada di baris pertama
 
-// Custom storage adapter menggunakan Expo SecureStore (Aman & Persistent)
 const ExpoSecureStoreAdapter = {
-  getItem: (key: string) => {
-    return SecureStore.getItemAsync(key);
-  },
-  setItem: (key: string, value: string) => {
-    return SecureStore.setItemAsync(key, value);
-  },
-  removeItem: (key: string) => {
-    return SecureStore.deleteItemAsync(key);
-  },
+  getItem: (key: string) => SecureStore.getItemAsync(key),
+  setItem: (key: string, value: string) => SecureStore.setItemAsync(key, value),
+  removeItem: (key: string) => SecureStore.deleteItemAsync(key),
 };
 
-// URL dan Anon Key Supabase Anda
-// Sangat direkomendasikan menggunakan EXPO_PUBLIC_ di file .env
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://xyzcompany.supabase.co';
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'your-anon-key-here';
+// Hardcode langsung seperti di app/database/supabaseClient.ts
+const supabaseUrl = 'https://akyahililnwxuorbvbey.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFreWFoaWxpbG53eHVvcmJ2YmV5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE0OTIxODMsImV4cCI6MjA5NzA2ODE4M30.FZBie-F-TPgufP9zC7gaMRy5JKcwba_KZH-6KTbUHUs';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {

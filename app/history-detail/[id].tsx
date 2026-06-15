@@ -12,6 +12,7 @@ import {
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
+  Linking,
   Platform,
   SafeAreaView,
   ScrollView,
@@ -23,57 +24,108 @@ import {
   View
 } from 'react-native';
 
-// Import database service
-import * as SQLite from 'expo-sqlite';
+// Supabase
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../context/AuthContext';
 
-// Buka koneksi database (Sesuaikan nama DB jika menyatu dengan tabel contacts, misal: 'panic_button.db')
-const db = SQLite.openDatabaseSync('sos_system.db');
 
-// Definisikan interface untuk tipe data riwayat SOS
 interface SOSHistory {
-  id: number;
+  id: string;
   location: string;
   date_str: string;
   time_str: string;
   recipients: string;
   status: 'Terkirim' | 'Sebagian' | 'Gagal';
+  created_at?: string;
 }
 
 export default function HistoryDetailScreen() {
   const router = useRouter();
-  
-  // Ambil id dengan penegasan tipe data string yang aman dari Expo Router
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { session } = useAuth();
   const [data, setData] = useState<SOSHistory | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [namaMahasiswa, setNamaMahasiswa] = useState('');
+  const [npmMahasiswa, setNpmMahasiswa] = useState('-');
+  const [prodiMahasiswa, setProdiMahasiswa] = useState('-');
 
   useEffect(() => {
-    if (!id) return;
-    
+    if (!id || !session?.user?.id) return;
+
+    const fetchDetail = async () => {
+      try {
+        setIsLoading(true);
+
+        const { data: result, error } = await supabase
+          .from('sos_history')
+          .select('*')
+          .eq('id', id)
+          .eq('user_id', session.user.id)
+          .single();
+
+        if (error) throw error;
+        setData(result as SOSHistory);
+      } catch (e: any) {
+        console.error('Gagal memuat detail riwayat:', JSON.stringify({
+          message: e?.message,
+          code: e?.code,
+          details: e?.details,
+          hint: e?.hint,
+        }, null, 2));
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    const fetchProfil = async () => {
     try {
-      // Ambil data spesifik berdasarkan ID dari SQLite
-      const result = db.getFirstSync(
-        'SELECT * FROM sos_history WHERE id = ?', 
-        [parseInt(id, 10)]
-      ) as SOSHistory | null;
-      
-      setData(result);
+      const { data: profil, error } = await supabase
+        .from('profiles')  // sesuaikan nama tabel profil kamu
+        .select('full_name, npm, prodi')
+        .eq('id', session.user.id)
+        .single();
+
+      if (!error && profil) {
+        setNamaMahasiswa(profil.full_name || '');
+        setNpmMahasiswa(profil.npm || '-');
+        setProdiMahasiswa(profil.prodi || '-');
+      }
     } catch (e) {
-      console.error('Gagal memuat detail riwayat:', e);
+      console.error('Gagal fetch profil:', e);
     }
-  }, [id]);
+  };
+
+    fetchDetail();
+    fetchProfil();
+  }, [id, session]);
+
+  const handleOpenMaps = () => {
+    if (!data?.location) return;
+
+    // Bersihkan tanda kutip jika ada di awal/akhir string
+    const cleanLocation = data.location.replace(/^"|"$/g, '').trim();
+    const encoded = encodeURIComponent(cleanLocation);
+    const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encoded}`;
+
+    Linking.openURL(googleMapsUrl).catch(() => {
+      Alert.alert('Error', 'Tidak dapat membuka Google Maps.');
+    });
+  };
 
   const handleCopyMessage = async () => {
     if (!data) return;
-    const text = `[DARURAT - PANIC BUTTON]\n\nSaya membutuhkan bantuan segera!\n\nLokasi saya: ${data.location}\n\nWaktu: ${data.date_str}, ${data.time_str}\nDikirim via SafeCampus`;
+    const cleanLocation = data.location.replace(/^"|"$/g, '').trim();
+    const text = `[DARURAT - PANIC BUTTON]\n\nSaya membutuhkan bantuan segera!\n\nLokasi saya: ${cleanLocation}\n\nWaktu: ${data.date_str}, ${data.time_str}\nDikirim via PanicButtonApp`;
     await Clipboard.setStringAsync(text);
     Alert.alert('Berhasil', 'Isi pesan darurat berhasil disalin ke clipboard!');
   };
 
   const handleShareSOS = async () => {
     if (!data) return;
+    const cleanLocation = data.location.replace(/^"|"$/g, '').trim();
     try {
       await Share.share({
-        message: `Detail SOS SafeCampus (ID: ${data.id})\n\nWaktu: ${data.date_str}, ${data.time_str}\nLokasi: ${data.location}\nDikirim ke: ${data.recipients}\nStatus: ${data.status}`,
+        message: `Detail SOS PanicButtonApp (ID: ${data.id})\n\nWaktu: ${data.date_str}, ${data.time_str}\nLokasi: ${cleanLocation}\nDikirim ke: ${data.recipients}\nStatus: ${data.status}`,
       });
     } catch (error: any) {
       Alert.alert('Error', error.message);
@@ -89,14 +141,19 @@ export default function HistoryDetailScreen() {
         {
           text: 'Hapus',
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
             try {
-              if (id) {
-                db.runSync('DELETE FROM sos_history WHERE id = ?', [parseInt(id, 10)]);
-                Alert.alert('Sukses', 'Riwayat berhasil dihapus.', [
-                  { text: 'OK', onPress: () => router.back() }
-                ]);
-              }
+              const { error } = await supabase
+                .from('sos_history')
+                .delete()
+                .eq('id', id)
+                .eq('user_id', session?.user?.id);
+
+              if (error) throw error;
+
+              Alert.alert('Sukses', 'Riwayat berhasil dihapus.', [
+                { text: 'OK', onPress: () => router.back() }
+              ]);
             } catch (e) {
               Alert.alert('Error', 'Gagal menghapus riwayat.');
             }
@@ -106,7 +163,8 @@ export default function HistoryDetailScreen() {
     );
   };
 
-  if (!data) {
+  // Loading / not found state
+  if (isLoading || !data) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.topbar}>
@@ -117,7 +175,9 @@ export default function HistoryDetailScreen() {
           <View style={{ width: 34 }} />
         </View>
         <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>Memuat data detail riwayat...</Text>
+          <Text style={styles.emptyText}>
+            {isLoading ? 'Memuat data detail riwayat...' : 'Data tidak ditemukan.'}
+          </Text>
         </View>
       </SafeAreaView>
     );
@@ -126,11 +186,12 @@ export default function HistoryDetailScreen() {
   const isSuccess = data.status === 'Terkirim';
   const isPartial = data.status === 'Sebagian';
   const isFailed = data.status === 'Gagal';
+  const cleanLocation = data.location.replace(/^"|"$/g, '').trim();
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
-      
+
       {/* Topbar Navigation */}
       <View style={styles.topbar}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
@@ -143,30 +204,42 @@ export default function HistoryDetailScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollBody} showsVerticalScrollIndicator={false}>
-        
+
         {/* Status Banner */}
-        <View style={[styles.statusBanner, isSuccess && styles.bannerSuccess, isPartial && styles.bannerPartial, isFailed && styles.bannerFailed]}>
+        <View style={[
+          styles.statusBanner,
+          isSuccess && styles.bannerSuccess,
+          isPartial && styles.bannerPartial,
+          isFailed && styles.bannerFailed
+        ]}>
           {isFailed ? (
             <XCircle size={20} color="#b91c1c" />
           ) : (
             <CheckCircle2 size={20} color={isPartial ? '#a16207' : '#16a34a'} />
           )}
           <View style={{ marginLeft: 10, flex: 1 }}>
-            <Text style={[styles.bannerTitle, { color: isFailed ? '#991b1b' : isPartial ? '#a16207' : '#15803d' }]}>
+            <Text style={[
+              styles.bannerTitle,
+              { color: isFailed ? '#991b1b' : isPartial ? '#a16207' : '#15803d' }
+            ]}>
               {isSuccess ? 'SOS Berhasil Dikirim' : isPartial ? 'SOS Terkirim Sebagian' : 'SOS Gagal Terkirim'}
             </Text>
-            <Text style={[styles.bannerSub, { color: isFailed ? '#b91c1c' : isPartial ? '#a16207' : '#16a34a' }]} numberOfLines={1}>
+            <Text style={[
+              styles.bannerSub,
+              { color: isFailed ? '#b91c1c' : isPartial ? '#a16207' : '#16a34a' }
+            ]} numberOfLines={1}>
               Target: {data.recipients}
             </Text>
           </View>
         </View>
 
-        {/* Info Lokasi Koordinat */}
-        <View style={styles.mapWrap}>
+        {/* Info Lokasi - Tap untuk buka Google Maps */}
+        <TouchableOpacity style={styles.mapWrap} onPress={handleOpenMaps} activeOpacity={0.7}>
           <MapPin size={28} color="#B91C1C" />
           <Text style={styles.mapLabel}>Lokasi saat SOS dikirim</Text>
-          <Text style={styles.mapCoord}>{data.location}</Text>
-        </View>
+          <Text style={styles.mapCoord}>{cleanLocation}</Text>
+          <Text style={styles.mapHint}>Ketuk untuk buka di Google Maps</Text>
+        </TouchableOpacity>
 
         {/* Log Informasi Detail */}
         <View style={styles.detailCard}>
@@ -180,8 +253,16 @@ export default function HistoryDetailScreen() {
           </View>
           <View style={[styles.detailRow, styles.noBorder]}>
             <Text style={styles.detailKey}>Status Akhir</Text>
-            <View style={[styles.badge, isSuccess && styles.badgeSuccess, isPartial && styles.badgePartial, isFailed && styles.badgeFailed]}>
-              <Text style={[styles.badgeText, { color: isFailed ? '#b91c1c' : isPartial ? '#a16207' : '#16a34a' }]}>
+            <View style={[
+              styles.badge,
+              isSuccess && styles.badgeSuccess,
+              isPartial && styles.badgePartial,
+              isFailed && styles.badgeFailed
+            ]}>
+              <Text style={[
+                styles.badgeText,
+                { color: isFailed ? '#b91c1c' : isPartial ? '#a16207' : '#16a34a' }
+              ]}>
                 {data.status}
               </Text>
             </View>
@@ -198,10 +279,13 @@ export default function HistoryDetailScreen() {
             </TouchableOpacity>
           </View>
           <Text style={styles.msgText}>
-            [DARURAT - PANIC BUTTON]{'\n'}{'\n'}
-            Saya membutuhkan bantuan segera!{'\n'}{'\n'}
-            Lokasi saya: {data.location}{'\n'}{'\n'}
-            Dikirim via SafeCampus
+            [DARURAT - PANIC BUTTON UNILA]{'\n\n'}
+                  Saya membutuhkan bantuan segera!{'\n\n'}
+                  Nama: {namaMahasiswa}{'\n'}
+                  NPM: {npmMahasiswa}{'\n'}
+                  Prodi: {prodiMahasiswa}{'\n\n'}
+                  Lokasi saya: [Alamat GPS]{'\n'}
+                  Koordinat: https://maps.google.com/?q=[koordinat]
           </Text>
         </View>
 
@@ -210,7 +294,7 @@ export default function HistoryDetailScreen() {
           <Trash2 size={16} color="#B91C1C" />
           <Text style={styles.deleteBtnText}>Hapus riwayat ini</Text>
         </TouchableOpacity>
-        
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -263,6 +347,7 @@ const styles = StyleSheet.create({
   },
   mapLabel: { fontSize: 12, color: '#2563eb', fontWeight: '600', marginTop: 6 },
   mapCoord: { fontSize: 11, color: '#3b82f6', marginTop: 4, textAlign: 'center', lineHeight: 16 },
+  mapHint: { fontSize: 10, color: '#93c5fd', marginTop: 6, fontStyle: 'italic' },
 
   detailCard: {
     backgroundColor: '#fafafa',
@@ -291,10 +376,10 @@ const styles = StyleSheet.create({
   badgePartial: { backgroundColor: '#fef9c3' },
   badgeFailed: { backgroundColor: '#fee2e2' },
 
-  msgCard: { 
-    backgroundColor: '#fafafa', 
-    borderRadius: 12, 
-    padding: 14, 
+  msgCard: {
+    backgroundColor: '#fafafa',
+    borderRadius: 12,
+    padding: 14,
     marginBottom: 20,
     borderWidth: 1,
     borderColor: '#f0f0f0',

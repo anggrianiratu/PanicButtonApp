@@ -2,6 +2,7 @@
 import { Redirect, Tabs } from 'expo-router';
 import { History, Home, ShieldAlert, User } from 'lucide-react-native';
 import { ActivityIndicator, View } from 'react-native';
+import 'react-native-url-polyfill/auto';
 import { useAuth } from '../context/AuthContext'; // Sesuaikan path-nya
 
 export default function TabLayout() {
@@ -33,6 +34,7 @@ export default function TabLayout() {
       <Tabs.Screen name="contact" options={{ title: 'Kontak', tabBarIcon: ({ color }) => <ShieldAlert color={color} size={20} /> }} />
       <Tabs.Screen name="history" options={{ title: 'Riwayat', tabBarIcon: ({ color }) => <History color={color} size={20} /> }} />
       <Tabs.Screen name="profile" options={{ title: 'Profil', tabBarIcon: ({ color }) => <User color={color} size={20} /> }} />
+      <Tabs.Screen name="contact-form" options={{ href: null }} />
     </Tabs>
   );
 }

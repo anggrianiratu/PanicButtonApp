@@ -11,18 +11,19 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-import { db } from '../database/repository';
+import { fetchContacts } from '../database/repository';
 
 // Interface disesuaikan dengan tipe kolom SQLite Anda
 export interface Contact {
-  id: string;
+  id: number;
+  user_id: string;
   name: string;
-  role: string;
-  category: 'Petugas Keamanan' | 'Keluarga' | 'Teman' | 'Lainnya';
+  role: string | null;
+  relation: 'Petugas Keamanan' | 'Keluarga' | 'Teman' | 'Lainnya';
   phone: string;
-  priority: number;
-  initials: string;
-  theme: 'red' | 'blue' | 'green' | 'amber';
+  priority: number | null;
+  initials: string | null;
+  theme: 'red' | 'blue' | 'green' | 'amber' | null;
 }
 
 export default function ContactScreen() {
@@ -31,20 +32,22 @@ export default function ContactScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      try {
-        const storedContacts = db.getAllSync(
-          'SELECT * FROM contacts ORDER BY category ASC, priority ASC'
-        ) as Contact[];
-        
-        if (storedContacts && storedContacts.length > 0) {
-          setContactsData(storedContacts);
-        } else {
+      const loadContacts = async () => {
+        try {
+          const storedContacts = await fetchContacts();
+
+          setContactsData(storedContacts as Contact[]);
+        } catch (error) {
+          console.error(
+            'Gagal memuat kontak dari Supabase:',
+            error
+          );
+
           setContactsData([]);
         }
-      } catch (error) {
-        console.error("Gagal memuat kontak dari SQLite:", error);
-        setContactsData([]);
-      }
+      };
+
+      loadContacts();
     }, [])
   );
 
@@ -68,7 +71,7 @@ export default function ContactScreen() {
       amber: { bg: styles.avAmber, text: '#a16207' },
     };
 
-    const currentAvatarTheme = avatarThemes[item.theme] || avatarThemes.red;
+    const currentAvatarTheme = avatarThemes[item.theme ?? 'red'];
     const avatarStyles = [styles.avatar, currentAvatarTheme.bg];
 
     const priorityThemes = {
@@ -77,35 +80,35 @@ export default function ContactScreen() {
       3: { bg: styles.badge3, text: '#6b7280' },
     };
 
-    const currentPriorityTheme = priorityThemes[item.priority as 1 | 2 | 3] || priorityThemes[3];
+    const currentPriorityTheme = priorityThemes[(item.priority ?? 3) as 1 | 2 | 3];
     const badgeStyles = [styles.priorityBadge, currentPriorityTheme.bg];
-    const showCategoryLabel = index === 0 || contactsData[index - 1].category !== item.category;
+    const showCategoryLabel = index === 0 || contactsData[index - 1].relation !== item.relation;
 
     return (
       <View>
         {showCategoryLabel && (
-          <Text style={styles.sectionLabel}>{item.category}</Text>
+          <Text style={styles.sectionLabel}>{item.relation}</Text>
         )}
         <TouchableOpacity
           style={styles.contactItem}
-          onPress={() => handleNavigateToForm(item.id)}
+          onPress={() => handleNavigateToForm(item.id.toString())}
           activeOpacity={0.7}
         >
           <View style={avatarStyles}>
             <Text style={[styles.avatarText, { color: currentAvatarTheme.text }]}>
-              {item.initials}
+              {item.initials ?? '?'}
             </Text>
           </View>
           
           <View style={styles.contactInfo}>
             <Text style={styles.contactName} numberOfLines={1}>{item.name}</Text>
-            <Text style={styles.contactRole} numberOfLines={1}>{item.role}</Text>
+            <Text style={styles.contactRole} numberOfLines={1}>{item.role ?? item.relation}</Text>
             <Text style={styles.contactPhone}>{item.phone}</Text>
           </View>
 
           <View style={badgeStyles}>
             <Text style={[styles.badgeText, { color: currentPriorityTheme.text }]}>
-              P{item.priority}
+              P{item.priority ?? 3}
             </Text>
           </View>
 
@@ -132,7 +135,7 @@ export default function ContactScreen() {
 
       <FlatList
         data={contactsData}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.id.toString()}
         renderItem={renderContactItem}
         contentContainerStyle={styles.listBody}
         showsVerticalScrollIndicator={false}

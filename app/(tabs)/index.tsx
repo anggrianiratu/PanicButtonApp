@@ -280,26 +280,30 @@ export default function HomeScreen() {
     kontakYangDikirimi: string[]
   ) => {
     try {
+      if (!session?.user?.id) {
+        console.error("User tidak ditemukan (belum login)");
+        return;
+      }
+
       const today = new Date();
-      const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-      const monthsShort = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
+      const months = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+      const monthsShort = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
 
       const dateStr = `${today.getDate()} ${monthsShort[today.getMonth()]} ${today.getFullYear()}`;
-      const timeStr = `${today.getHours().toString().padStart(2, '0')}:${today.getMinutes().toString().padStart(2, '0')}`;
+      const timeStr = `${today.getHours().toString().padStart(2,'0')}:${today.getMinutes().toString().padStart(2,'0')}`;
       const monthGroup = `${months[today.getMonth()]} ${today.getFullYear()}`;
       const recipients = kontakYangDikirimi.join(', ');
 
-      // Tulis data riwayat langsung ke tabel history Supabase
       await addHistory({
-        user_id: session?.user?.id,
-        timestamp: Date.now(),
-        dateStr,
-        timeStr,
-        monthGroup,
-        status: statusKirim,
-        location: lokasiSaatIni,
-        recipients
+        user_id: session.user.id,
+        location: JSON.stringify(lokasiSaatIni),
+        date_str: dateStr,
+        time_str: timeStr,
+        recipients,
+        status: statusKirim
       });
+
     } catch (error) {
       console.error("Gagal merekam riwayat SOS ke Supabase:", error);
     }

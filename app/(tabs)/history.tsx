@@ -14,16 +14,16 @@ import {
 } from 'react-native';
 
 // INTEGRASI SUPABASE
-import { supabase } from '../../lib/supabase';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../database/supabaseClient';
 
 // Definisi tipe data struktur riwayat (Type-Safe & Match Supabase)
 export interface HistoryItem {
   id: string;
-  created_at?: string; // Kolom default Supabase
-  dateStr: string;
-  timeStr: string;
-  monthGroup: string;
+  created_at?: string;
+  date_str: string;
+  time_str: string;
+  monthGroup?: string;
   status: 'Terkirim' | 'Gagal' | 'Sebagian';
   location: string;
   recipients: string;
@@ -67,7 +67,11 @@ export default function HistoryScreen() {
             setHistoryData(data as HistoryItem[]);
           }
         } catch (error) {
-          console.error('Gagal memuat riwayat SOS dari Supabase:', error);
+          // Paksa tipe data menjadi 'any' di dalam variabel baru agar TS tidak komplain
+          const errorAman = error as any;
+          
+          console.error('Gagal memuat riwayat SOS dari Supabase:', errorAman.message || errorAman);
+          console.log('Detail Error Supabase:', JSON.stringify(errorAman, null, 2));
         } finally {
           setIsLoading(false);
         }
@@ -107,12 +111,16 @@ export default function HistoryScreen() {
 
   // Mengelompokkan riwayat berdasarkan kelompok bulan
   const groups = filteredHistory.reduce((acc, item) => {
-    if (!acc[item.monthGroup]) {
-      acc[item.monthGroup] = [];
-    }
-    acc[item.monthGroup].push(item);
-    return acc;
-  }, {} as Record<string, HistoryItem[]>);
+  const month = item.monthGroup ?? 'Tidak diketahui';
+
+  if (!acc[month]) {
+    acc[month] = [];
+  }
+
+  acc[month].push(item);
+
+  return acc;
+}, {} as Record<string, HistoryItem[]>);
 
   const getBadgeStyle = (status: HistoryItem['status']) => {
     switch (status) {
@@ -211,7 +219,7 @@ export default function HistoryScreen() {
                   }}
                 >
                   <View style={styles.histHeader}>
-                    <Text style={styles.histTime}>{item.dateStr}, {item.timeStr}</Text>
+                    <Text style={styles.histTime}>{item.date_str}, {item.time_str}</Text>
                     <View style={[styles.badge, getBadgeStyle(item.status)]}>
                       <Text style={[styles.badgeText, getBadgeTextStyle(item.status)]}>
                         {item.status}

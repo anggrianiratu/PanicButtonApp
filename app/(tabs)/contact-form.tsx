@@ -14,8 +14,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-import { db } from '../database/repository';
-import { Contact } from './contact'; // Melakukan re-use interface secara modular
+import { supabase } from '../database/supabaseClient';
 
 type RelationType = 'Keluarga' | 'Petugas Keamanan' | 'Teman' | 'Lainnya';
 
@@ -50,82 +49,152 @@ export default function ContactFormScreen() {
     }
   }, [fullName]);
 
-  const loadExistingContact = (contactId: string) => {
+  const loadExistingContact = async (contactId: string) => {
     try {
-      const contact = db.getFirstSync(
-        'SELECT * FROM contacts WHERE id = ?',
-        [contactId]
-      ) as Contact | null;
-      
-      if (contact) {
-        setFullName(contact.name);
-        setPhoneNumber(contact.phone);
-        setRelation(contact.category as RelationType);
-        setPriority(contact.priority.toString());
-        setExistingTheme(contact.theme);
+      const { data, error } = await supabase
+        .from('contacts')
+        .select('*')
+        .eq('id', Number(contactId))
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        setFullName(data.name);
+        setPhoneNumber(data.phone);
+        setRelation((data.relation || 'Keluarga') as RelationType);
+        setPriority((data.priority || 3).toString());
+        setExistingTheme((data.theme || 'red') as any);
       }
     } catch (error) {
-      console.error('Gagal memuat kontak dari SQLite:', error);
+      console.error('Gagal memuat kontak:', error);
     }
   };
 
-  const handleSaveContact = () => {
+  const handleSaveContact = async () => {
     if (!fullName || !phoneNumber) {
-      Alert.alert('Peringatan', 'Mohon lengkapi Nama Lengkap dan Nomor Telepon.');
+      Alert.alert(
+        'Peringatan',
+        'Mohon lengkapi Nama Lengkap dan Nomor Telepon.'
+      );
       return;
     }
 
     try {
-      const themes: Array<'red' | 'blue' | 'green' | 'amber'> = ['red', 'blue', 'green', 'amber'];
-      const randomTheme = themes[Math.floor(Math.random() * themes.length)];
-      const stringId = id ? id : `CONTACT-${Date.now()}`;
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        Alert.alert('Error', 'Pengguna belum login.');
+        return;
+      }
+
+      const themes: Array<'red' | 'blue' | 'green' | 'amber'> = [
+        'red',
+        'blue',
+        'green',
+        'amber',
+      ];
+
+      const randomTheme =
+        themes[Math.floor(Math.random() * themes.length)];
+
       const targetTheme = id ? existingTheme : randomTheme;
+
       const numericPriority = parseInt(priority, 10);
-      const roleLabel = relation === 'Petugas Keamanan' ? 'Petugas' : relation;
+
+      const roleLabel =
+        relation === 'Petugas Keamanan'
+          ? 'Petugas'
+          : relation;
 
       if (id) {
-        db.runSync(
-          `UPDATE contacts 
-           SET name = ?, role = ?, category = ?, phone = ?, priority = ?, initials = ?, theme = ? 
-           WHERE id = ?`,
-          [fullName, roleLabel, relation, phoneNumber, numericPriority, initials, targetTheme, stringId]
-        );
+        const { error } = await supabase
+          .from('contacts')
+          .update({
+            name: fullName,
+            phone: phoneNumber,
+            relation,
+            priority: numericPriority,
+            initials,
+            theme: targetTheme,
+            role: roleLabel,
+          })
+          .eq('id', Number(id));
+
+        if (error) throw error;
       } else {
-        db.runSync(
-          `INSERT INTO contacts (id, name, role, category, phone, priority, initials, theme) 
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [stringId, fullName, roleLabel, relation, phoneNumber, numericPriority, initials, targetTheme]
-        );
+        const { error } = await supabase
+          .from('contacts')
+          .insert([
+            {
+              user_id: user.id,
+              name: fullName,
+              phone: phoneNumber,
+              relation,
+              priority: numericPriority,
+              initials,
+              theme: targetTheme,
+              role: roleLabel,
+            },
+          ]);
+
+        if (error) throw error;
       }
 
       Alert.alert('Berhasil', 'Kontak berhasil disimpan!', [
-        { text: 'OK', onPress: () => router.back() }
+        {
+          text: 'OK',
+          onPress: () => router.back(),
+        },
       ]);
-    } catch (error) {
-      Alert.alert('Error', 'Gagal menyimpan kontak ke database.');
+    } catch (error: any) {
       console.error(error);
+
+      Alert.alert(
+        'Error',
+        error.message || 'Gagal menyimpan kontak.'
+      );
     }
   };
 
   const handleDeleteContact = () => {
-    Alert.alert('Hapus Kontak', 'Apakah Anda yakin ingin menghapus kontak ini secara permanen?', [
-      { text: 'Batal', style: 'cancel' },
-      { 
-        text: 'Hapus', 
-        style: 'destructive', 
-        onPress: () => {
-          try {
-            if (id) {
-              db.runSync('DELETE FROM contacts WHERE id = ?', [id]);
+    Alert.alert(
+      'Hapus Kontak',
+      'Apakah Anda yakin ingin menghapus kontak ini secara permanen?',
+      [
+        {
+          text: 'Batal',
+          style: 'cancel',
+        },
+        {
+          text: 'Hapus',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              if (id) {
+                const { error } = await supabase
+                  .from('contacts')
+                  .delete()
+                  .eq('id', Number(id));
+
+                if (error) throw error;
+              }
+
+              router.back();
+            } catch (error) {
+              Alert.alert(
+                'Error',
+                'Gagal menghapus kontak.'
+              );
+
+              console.error(error);
             }
-            router.back();
-          } catch (error) {
-            Alert.alert('Error', 'Gagal menghapus kontak dari database.');
-            console.error(error);
-          }
-        } 
-      }
-    ]);
+          },
+        },
+      ]
+    );
   };
 
   return (

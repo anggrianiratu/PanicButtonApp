@@ -57,15 +57,22 @@ export default function RegisterScreen() {
       // 1. Daftar akun di auth Supabase
       const { data, error } = await supabase.auth.signUp({
         email: trimmedEmail,
-        password: password,
+        password,
         options: {
+          emailRedirectTo: 'panicbuttonapp://',
           data: {
             full_name: trimmedName,
           },
         },
       });
 
+      console.log('===== SIGNUP DATA =====');
+      console.log(JSON.stringify(data, null, 2));
+
       if (error) {
+        console.log('===== SIGNUP ERROR =====');
+        console.log(JSON.stringify(error, null, 2));
+
         Alert.alert('Gagal Daftar', error.message);
         setLoading(false);
         return;
@@ -120,7 +127,7 @@ export default function RegisterScreen() {
           
           <View style={styles.titleArea}>
             <Text style={styles.mainTitle}>Daftar Akun</Text>
-            <Text style={styles.subTitle}>Buat akun SafeCampus untuk akses tombol darurat</Text>
+            <Text style={styles.subTitle}>Buat akun PanicButtonApp untuk akses tombol darurat</Text>
           </View>
 
           {/* FORM REGISTER */}

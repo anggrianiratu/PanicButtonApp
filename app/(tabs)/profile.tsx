@@ -162,7 +162,7 @@ export default function ProfileScreen() {
   const handleLogout = () => {
     Alert.alert(
       'Keluar Akun',
-      'Apakah Anda yakin ingin keluar dari akun SafeCampus?',
+      'Apakah Anda yakin ingin keluar dari akun PanicButtonApp?',
       [
         { text: 'Batal', style: 'cancel' },
         {
@@ -308,7 +308,7 @@ export default function ProfileScreen() {
         </TouchableOpacity>
 
         {/* Version Footer */}
-        <Text style={styles.versionText}>SafeCampus v1.0.0 · © 2026</Text>
+        <Text style={styles.versionText}>PanicButtonApp v1.0.0 · © 2026</Text>
       </ScrollView>
 
       {/* MODAL TEMPLATE PESAN SOS */}
