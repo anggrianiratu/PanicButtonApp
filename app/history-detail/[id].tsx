@@ -279,14 +279,8 @@ export default function HistoryDetailScreen() {
             </TouchableOpacity>
           </View>
           <Text style={styles.msgText}>
-            [DARURAT - PANIC BUTTON UNILA]{'\n\n'}
-                  Saya membutuhkan bantuan segera!{'\n\n'}
-                  Nama: {namaMahasiswa}{'\n'}
-                  NPM: {npmMahasiswa}{'\n'}
-                  Prodi: {prodiMahasiswa}{'\n\n'}
-                  Lokasi saya: [Alamat GPS]{'\n'}
-                  Koordinat: https://maps.google.com/?q=[koordinat]
-          </Text>
+  [DARURAT - PANIC BUTTON UNILA]{'\n\n'}Saya membutuhkan bantuan segera!{'\n\n'}Nama: {namaMahasiswa}{'\n'}NPM: {npmMahasiswa}{'\n'}Prodi: {prodiMahasiswa}{'\n\n'}Lokasi saya: [Alamat GPS]{'\n'}Koordinat: https://maps.google.com/?q=[koordinat]
+</Text>
         </View>
 
         {/* Tombol Hapus Riwayat */}

@@ -336,14 +336,12 @@ export default function ProfileScreen() {
             <View style={styles.waBubbleWrapper}>
               <View style={styles.waBubble}>
                 <Text style={styles.waBubbleText}>
-                  [DARURAT - PANIC BUTTON UNILA]{'\n\n'}
-                  Saya membutuhkan bantuan segera!{'\n\n'}
-                  Nama: {namaMahasiswa}{'\n'}
-                  NPM: {npmMahasiswa}{'\n'}
-                  Prodi: {prodiMahasiswa}{'\n\n'}
-                  Lokasi saya: [Alamat GPS]{'\n'}
-                  Koordinat: https://maps.google.com/?q=[koordinat]
-                </Text>
+  [DARURAT - PANIC BUTTON UNILA]{'\n\n'}
+  Saya membutuhkan bantuan segera!{'\n\n'}
+  Nama: {namaMahasiswa}{'\n'}NPM: {npmMahasiswa}{'\n'}Prodi: {prodiMahasiswa}{'\n\n'}
+  Lokasi saya: [Alamat GPS]{'\n'}
+  Koordinat: https://maps.google.com/?q=[koordinat]
+</Text>
                 <Text style={styles.waBubbleTime}>✓✓ Terkirim</Text>
               </View>
             </View>
