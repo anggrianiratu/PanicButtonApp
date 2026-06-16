@@ -53,8 +53,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "15af311b-c050-42ad-a12d-104e22974984"
+        "projectId": "e494b850-3ece-4d73-9b43-d7a840df75ac"
       }
-    }
+    },
+    "owner": "nabillachai"
   }
 }

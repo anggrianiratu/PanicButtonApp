@@ -170,18 +170,8 @@ export default function ContactScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
-// Ganti ini di StyleSheet contact.tsx:
-topbar: { 
-  flexDirection: 'row', 
-  alignItems: 'center', 
-  justifyContent: 'space-between', 
-  paddingHorizontal: 20, 
-  paddingTop: Platform.OS === 'android' ? 15 : 10, 
-  paddingBottom: 12, 
-  borderBottomWidth: 1, 
-  borderBottomColor: '#f0f0f0' 
-},
-topbarTitle: { fontSize: 16, fontWeight: '600', color: '#1a1a1a' },
+  topbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: Platform.OS === 'android' ? 15 : 10, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
+  topbarTitle: { fontSize: 16, fontWeight: '600', color: '#1a1a1a' },
   listBody: { paddingBottom: 100, paddingTop: 14, flexGrow: 1 },
   infoBanner: { marginHorizontal: 20, marginBottom: 12, backgroundColor: '#fff5f5', borderColor: '#fecaca', borderWidth: 1, borderRadius: 10, padding: 10, flexDirection: 'row', alignItems: 'center' },
   infoIcon: { marginRight: 8 },

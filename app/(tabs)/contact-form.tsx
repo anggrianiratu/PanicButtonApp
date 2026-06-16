@@ -20,7 +20,7 @@ type RelationType = 'Keluarga' | 'Petugas Keamanan' | 'Teman' | 'Lainnya';
 
 export default function ContactFormScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>(); // Definisi eksplisit tipe parameter pencarian
+  const { id } = useLocalSearchParams<{ id: string }>();
 
   const [fullName, setFullName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -30,8 +30,15 @@ export default function ContactFormScreen() {
   const [existingTheme, setExistingTheme] = useState<'red' | 'blue' | 'green' | 'amber'>('red');
 
   useEffect(() => {
-    if (id) {
+    if (id && id.trim() !== '') {
       loadExistingContact(id);
+    } else {
+      setFullName('');
+      setPhoneNumber('');
+      setRelation('Keluarga');
+      setPriority('3');
+      setInitials('--');
+      setExistingTheme('red');
     }
   }, [id]);
 
@@ -97,19 +104,13 @@ export default function ContactFormScreen() {
         'amber',
       ];
 
-      const randomTheme =
-        themes[Math.floor(Math.random() * themes.length)];
-
-      const targetTheme = id ? existingTheme : randomTheme;
-
+      const randomTheme = themes[Math.floor(Math.random() * themes.length)];
+      const isEditMode = Boolean(id && id.trim() !== '');
+      const targetTheme = isEditMode ? existingTheme : randomTheme;
       const numericPriority = parseInt(priority, 10);
+      const roleLabel = relation === 'Petugas Keamanan' ? 'Petugas' : relation;
 
-      const roleLabel =
-        relation === 'Petugas Keamanan'
-          ? 'Petugas'
-          : relation;
-
-      if (id) {
+      if (isEditMode) {
         const { error } = await supabase
           .from('contacts')
           .update({
@@ -151,11 +152,7 @@ export default function ContactFormScreen() {
       ]);
     } catch (error: any) {
       console.error(error);
-
-      Alert.alert(
-        'Error',
-        error.message || 'Gagal menyimpan kontak.'
-      );
+      Alert.alert('Error', error.message || 'Gagal menyimpan kontak.');
     }
   };
 
@@ -184,11 +181,7 @@ export default function ContactFormScreen() {
 
               router.push('/contact');
             } catch (error) {
-              Alert.alert(
-                'Error',
-                'Gagal menghapus kontak.'
-              );
-
+              Alert.alert('Error', 'Gagal menghapus kontak.');
               console.error(error);
             }
           },
@@ -197,16 +190,18 @@ export default function ContactFormScreen() {
     );
   };
 
+  const isEditMode = Boolean(id && id.trim() !== '');
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
-      
+
       <View style={styles.topbar}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.push('/contact')}>
           <ArrowLeft size={20} color="#1a1a1a" />
         </TouchableOpacity>
-        <Text style={styles.topbarTitle}>{id ? 'Edit Kontak' : 'Tambah Kontak'}</Text>
-        {id ? (
+        <Text style={styles.topbarTitle}>{isEditMode ? 'Edit Kontak' : 'Tambah Kontak'}</Text>
+        {isEditMode ? (
           <TouchableOpacity style={styles.deleteBtn} onPress={handleDeleteContact}>
             <Trash2 size={18} color="#ef4444" />
           </TouchableOpacity>
@@ -249,7 +244,7 @@ export default function ContactFormScreen() {
         <View style={styles.field}>
           <Text style={styles.fieldLabel}>Hubungan</Text>
           <View style={styles.radioGroup}>
-            {((['Keluarga', 'Petugas Keamanan', 'Teman', 'Lainnya'] as RelationType[])).map((type) => (
+            {(['Keluarga', 'Petugas Keamanan', 'Teman', 'Lainnya'] as RelationType[]).map((type) => (
               <TouchableOpacity
                 key={type}
                 style={[styles.radioOpt, relation === type && styles.radioOptSelected]}
@@ -289,7 +284,7 @@ export default function ContactFormScreen() {
 
         <View style={styles.divider} />
         <TouchableOpacity style={styles.saveBtn} onPress={handleSaveContact} activeOpacity={0.8}>
-          <Text style={styles.saveBtnText}>{id ? 'Simpan Perubahan' : 'Simpan Kontak'}</Text>
+          <Text style={styles.saveBtnText}>{isEditMode ? 'Simpan Perubahan' : 'Simpan Kontak'}</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -304,7 +299,7 @@ const styles = StyleSheet.create({
   deleteBtn: { width: 34, height: 34, justifyContent: 'center', alignItems: 'center' },
   scrollBody: { padding: 20, paddingBottom: 40 },
   avatarPreview: { flexDirection: 'row', justifyContent: 'center', marginBottom: 24 },
-  avatarCircle: { width: 72, height: 72, borderRadius: 36, backgroundColor: '#fee2e2', alignItems: 'center', justifyContent: 'center', position: 'relative' },
+  avatarCircle: { width: 72, height: 72, borderRadius: 36, backgroundColor: '#fee2e2', alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: '#b91c1c', fontSize: 22, fontWeight: '600' },
   field: { marginBottom: 16 },
   fieldLabel: { fontSize: 11, fontWeight: '600', color: '#888', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 },
