@@ -33,6 +33,24 @@ export interface HistoryItem {
 
 type FilterType = 'Semua' | 'Terkirim' | 'Gagal';
 
+// Fungsi helper untuk generate monthGroup dari date_str
+const generateMonthGroup = (dateStr: string): string => {
+  // dateStr format: "16 Jun 2026"
+  const monthsShort: Record<string, number> = {
+    'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'Mei': 4, 'Jun': 5,
+    'Jul': 6, 'Agu': 7, 'Sep': 8, 'Okt': 9, 'Nov': 10, 'Des': 11
+  };
+  const parts = dateStr.split(' ');
+  if (parts.length < 3) return 'Tidak diketahui';
+
+  const monthIndex = monthsShort[parts[1]];
+  if (monthIndex === undefined) return 'Tidak diketahui';
+
+  const d = new Date(parseInt(parts[2]), monthIndex, 1);
+  const monthName = d.toLocaleString('id-ID', { month: 'long', year: 'numeric' });
+  return monthName.charAt(0).toUpperCase() + monthName.slice(1);
+};
+
 export default function HistoryScreen() {
   const router = useRouter();
   const { session } = useAuth();
@@ -64,7 +82,12 @@ export default function HistoryScreen() {
           if (error) throw error;
 
           if (data) {
-            setHistoryData(data as HistoryItem[]);
+            // Generate monthGroup dari date_str agar filter bulan bisa berjalan
+            const dataWithMonth = (data as HistoryItem[]).map(item => ({
+              ...item,
+              monthGroup: generateMonthGroup(item.date_str)
+            }));
+            setHistoryData(dataWithMonth);
           }
         } catch (error) {
           // Paksa tipe data menjadi 'any' di dalam variabel baru agar TS tidak komplain
@@ -111,16 +134,16 @@ export default function HistoryScreen() {
 
   // Mengelompokkan riwayat berdasarkan kelompok bulan
   const groups = filteredHistory.reduce((acc, item) => {
-  const month = item.monthGroup ?? 'Tidak diketahui';
+    const month = item.monthGroup ?? 'Tidak diketahui';
 
-  if (!acc[month]) {
-    acc[month] = [];
-  }
+    if (!acc[month]) {
+      acc[month] = [];
+    }
 
-  acc[month].push(item);
+    acc[month].push(item);
 
-  return acc;
-}, {} as Record<string, HistoryItem[]>);
+    return acc;
+  }, {} as Record<string, HistoryItem[]>);
 
   const getBadgeStyle = (status: HistoryItem['status']) => {
     switch (status) {
@@ -195,10 +218,17 @@ export default function HistoryScreen() {
           <View style={styles.emptyState}>
             <Inbox size={44} color="#e5e5e5" />
             <Text style={styles.emptyStateText}>
-              {selectedMonthFilter !== 'Semua' 
-                ? `Tidak ada riwayat SOS pada periode ${selectedMonthFilter}.`
-                : 'Belum ada riwayat SOS terdaftar.'
-              }
+              {(() => {
+                const filterLabel =
+                  activeFilter === 'Terkirim' ? 'SOS terkirim' :
+                  activeFilter === 'Gagal' ? 'SOS gagal kirim' :
+                  'riwayat SOS';
+
+                if (selectedMonthFilter !== 'Semua') {
+                  return `Tidak ada ${filterLabel} pada periode ${selectedMonthFilter}.`;
+                }
+                return `Tidak ada ${filterLabel} yang tercatat.`;
+              })()}
             </Text>
           </View>
         ) : (
@@ -234,7 +264,7 @@ export default function HistoryScreen() {
                   
                   <Text style={styles.histTo}>
                     Dikirim ke: <Text style={styles.histToSpan}>{item.recipients}</Text>
-                    {item.extraInfo && <Text style={styles.histToSub}> {item.extraInfo}</Text>}
+                    {item.extraInfo ? <Text style={styles.histToSub}> {item.extraInfo}</Text> : null}
                   </Text>
                 </TouchableOpacity>
               ))}

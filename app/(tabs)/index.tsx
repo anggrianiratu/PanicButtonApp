@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -42,6 +43,8 @@ Notifications.setNotificationHandler({
   }),
 });
 
+const NOTIF_STORAGE_KEY = 'app_notifications';
+
 interface AppNotification {
   id: string;
   title: string;
@@ -53,7 +56,7 @@ interface AppNotification {
 const sendWhatsAppSOS = async (target: string, message: string, retries = 2): Promise<boolean> => {
   for (let attempt = 0; attempt <= retries; attempt++) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); 
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     try {
       const params = new URLSearchParams();
@@ -74,7 +77,7 @@ const sendWhatsAppSOS = async (target: string, message: string, retries = 2): Pr
       const jsonResult = await response.json();
 
       if (jsonResult.status) {
-        return true; 
+        return true;
       }
     } catch (error: any) {
       clearTimeout(timeoutId);
@@ -85,11 +88,17 @@ const sendWhatsAppSOS = async (target: string, message: string, retries = 2): Pr
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
   }
-  return false; 
+  return false;
+};
+
+// Fungsi format waktu
+const formatTime = () => {
+  const now = new Date();
+  return `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 };
 
 export default function HomeScreen() {
-  const { session } = useAuth(); // Ambil data session global
+  const { session } = useAuth();
   const [currentDate, setCurrentDate] = useState('');
   const [locationName, setLocationName] = useState('Mencari lokasi GPS...');
   const [coordinates, setCoordinates] = useState('Menghubungkan sinyal...');
@@ -113,12 +122,58 @@ export default function HomeScreen() {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const countdownInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Muat notifikasi dari AsyncStorage saat pertama kali buka
+  const muatNotifikasi = async () => {
+    try {
+      const stored = await AsyncStorage.getItem(NOTIF_STORAGE_KEY);
+      let existing: AppNotification[] = stored ? JSON.parse(stored) : [];
+
+      // Tambahkan notif "Sistem Keamanan Aktif" setiap kali buka aplikasi
+      const notifSistem: AppNotification = {
+        id: `system-${Date.now()}`,
+        title: 'Sistem Keamanan Aktif',
+        body: 'Layanan pemantauan GPS dan Panic Button berjalan dengan baik.',
+        time: formatTime(),
+        timestamp: Date.now(),
+      };
+
+      const updated = [notifSistem, ...existing];
+      await AsyncStorage.setItem(NOTIF_STORAGE_KEY, JSON.stringify(updated));
+      setPushNotifications(updated);
+      setHasUnread(true);
+    } catch (e) {
+      console.error('Gagal memuat notifikasi:', e);
+    }
+  };
+
+  // Simpan notifikasi baru ke AsyncStorage dan state
+  const simpanNotifikasi = async (title: string, body: string) => {
+    try {
+      const newNotif: AppNotification = {
+        id: `NOTIF-${Date.now()}`,
+        title,
+        body,
+        time: formatTime(),
+        timestamp: Date.now(),
+      };
+
+      const stored = await AsyncStorage.getItem(NOTIF_STORAGE_KEY);
+      const existing: AppNotification[] = stored ? JSON.parse(stored) : [];
+      const updated = [newNotif, ...existing];
+
+      await AsyncStorage.setItem(NOTIF_STORAGE_KEY, JSON.stringify(updated));
+      setPushNotifications(updated);
+      setHasUnread(true);
+    } catch (e) {
+      console.error('Gagal menyimpan notifikasi:', e);
+    }
+  };
+
   // Sinkronisasi data real-time dari Supabase setiap kali layar mendapat fokus
   useFocusEffect(
     useCallback(() => {
       const syncDataDariSupabase = async () => {
         try {
-          // 1. Ambil Data Kontak dari Supabase
           const storedContacts = await fetchContacts();
           if (storedContacts && storedContacts.length > 0) {
             setDaftarNomor(storedContacts.map((c: any) => c.phone));
@@ -127,27 +182,13 @@ export default function HomeScreen() {
             setDaftarNomor([]);
             setNamaKontak([]);
           }
-
-          // 2. Ambil Data Notifikasi Realtime dari State lokal/Supabase jika ada tabelnya
-          // Sementara dipertahankan draf statis jika Anda belum membuat tabel notifikasi khusus
-          if (pushNotifications.length === 0) {
-            setPushNotifications([
-              { 
-                id: 'system-1', 
-                title: 'Sistem Keamanan Aktif', 
-                body: 'Layanan pemantauan GPS dan Panic Button berjalan dengan baik.', 
-                time: 'Baru saja',
-                timestamp: Date.now()
-              }
-            ]);
-          }
         } catch (e) {
           console.error("Gagal sinkronisasi data dari Supabase:", e);
         }
       };
-      
+
       syncDataDariSupabase();
-    }, [pushNotifications.length])
+    }, [])
   );
 
   useEffect(() => {
@@ -160,6 +201,7 @@ export default function HomeScreen() {
 
     ambilNamaPengguna();
     ambilLokasiGPS(false);
+    muatNotifikasi();
 
     const pulseLoop = Animated.loop(
       Animated.sequence([
@@ -178,7 +220,7 @@ export default function HomeScreen() {
       const userProfile = await fetchUserProfile(session.user.id);
       if (userProfile) {
         setNamaUser(userProfile.full_name || 'Mahasiswa');
-        setNpmUser(userProfile.npm || '-'); 
+        setNpmUser(userProfile.npm || '-');
         setProdiUser(userProfile.prodi || '-');
       }
     } catch (e) {
@@ -193,7 +235,7 @@ export default function HomeScreen() {
 
     try {
       let { status } = await Location.requestForegroundPermissionsAsync();
-      
+
       if (status !== 'granted') {
         setLocationName('Akses GPS Ditolak');
         setCoordinates('Izin lokasi tidak diberikan');
@@ -211,7 +253,7 @@ export default function HomeScreen() {
       setCoordinates(`${latitude.toFixed(5)}, ${longitude.toFixed(5)}`);
 
       let reverseGeocode = await Location.reverseGeocodeAsync({ latitude, longitude });
-      
+
       if (reverseGeocode.length > 0) {
         let alamat = reverseGeocode[0];
         let namaTempat = alamat.name || alamat.street || 'Lokasi Terdeteksi';
@@ -287,13 +329,10 @@ export default function HomeScreen() {
       }
 
       const today = new Date();
-
-      const months = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-      const monthsShort = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+      const monthsShort = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 
       const dateStr = `${today.getDate()} ${monthsShort[today.getMonth()]} ${today.getFullYear()}`;
-      const timeStr = `${today.getHours().toString().padStart(2,'0')}:${today.getMinutes().toString().padStart(2,'0')}`;
-      const monthGroup = `${months[today.getMonth()]} ${today.getFullYear()}`;
+      const timeStr = `${today.getHours().toString().padStart(2, '0')}:${today.getMinutes().toString().padStart(2, '0')}`;
       const recipients = kontakYangDikirimi.join(', ');
 
       await addHistory({
@@ -310,23 +349,12 @@ export default function HomeScreen() {
     }
   };
 
-  const simpanNotifikasi = (title: string, body: string) => {
-    const now = new Date();
-    const time = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-    const timestamp = Date.now();
-    const newNotif: AppNotification = { id: `NOTIF-${timestamp}`, title, body, time, timestamp };
-
-    setPushNotifications(prev => [newNotif, ...prev]);
-    setHasUnread(true); // ← tambahkan ini
-  };
-
   const executeSendSOS = async () => {
     setIsModalVisible(false);
     setIsToastVisible(true);
 
     await ambilLokasiGPS(false);
 
-    // Perbaikan komparasi string literal yang tadinya typo "0{" menjadi "${"
     const teksPesan = `[DARURAT - PANIC BUTTON UNILA]\n\nSaya membutuhkan bantuan segera!\n\nNama: ${namaUser}\nNPM: ${npmUser}\nProdi: ${prodiUser}\n\nLokasi saya: ${locationName}\nKoordinat: https://maps.google.com/?q=${coordinates.replace(/\s+/g, '')}`;
 
     let berhasil: string[] = [];
@@ -348,7 +376,7 @@ export default function HomeScreen() {
           try {
             await SMS.sendSMSAsync([nomor], teksPesan);
             berhasil.push(nama);
-            gagal.pop(); 
+            gagal.pop();
           } catch (e) {
             console.log("Pengiriman SMS otomatis gagal.");
           }
@@ -377,7 +405,7 @@ export default function HomeScreen() {
     }
 
     await simpanRiwayatSOS(statusAkhir, locationName, berhasil.length > 0 ? berhasil : namaKontak);
-    simpanNotifikasi(notifTitle, notifBody);
+    await simpanNotifikasi(notifTitle, notifBody);
 
     try {
       const { status: statusNotif } = await Notifications.requestPermissionsAsync();
@@ -411,8 +439,8 @@ export default function HomeScreen() {
           <Text style={styles.topbarGreeting}>Halo, <Text style={styles.topbarName}>{namaUser}</Text></Text>
         </View>
 
-        <TouchableOpacity 
-          style={styles.topbarIcon} 
+        <TouchableOpacity
+          style={styles.topbarIcon}
           onPress={() => {
             setIsNotifVisible(true);
             setHasUnread(false);
@@ -439,15 +467,15 @@ export default function HomeScreen() {
         {/* LOCATION CARD */}
         <View style={styles.locCard}>
           <View style={styles.locHeader}>
-            <View style={{flexDirection: 'row', alignItems: 'center'}}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <MapPin size={16} color="#B91C1C" />
               <Text style={styles.locLabel}>Lokasi GPS Terkini</Text>
             </View>
             <TouchableOpacity onPress={refreshLocation} disabled={isRefreshing} style={styles.refreshBtn}>
-              <RefreshCw size={14} color="#64748b" style={isRefreshing && { opacity: 0.5 }} />
+              <RefreshCw size={14} color="#64748b" style={isRefreshing ? { opacity: 0.5 } : undefined} />
             </TouchableOpacity>
           </View>
-          
+
           <Text style={styles.locText} numberOfLines={2}>{locationName}</Text>
           <Text style={styles.locCoord}>{coordinates}</Text>
         </View>
@@ -455,7 +483,7 @@ export default function HomeScreen() {
         {/* SOS SECTION */}
         <View style={styles.sosSection}>
           <Text style={styles.sosHintTop}>Butuh Bantuan Cepat?</Text>
-          
+
           <View style={styles.sosRingOuter}>
             <Animated.View style={[styles.sosRingInner, { transform: [{ scale: pulseAnim }] }]}>
               <TouchableOpacity style={styles.sosBtn} onPress={triggerSOS} activeOpacity={0.8}>
@@ -474,8 +502,8 @@ export default function HomeScreen() {
           <View style={styles.contactStatusText}>
             <Text style={styles.contactTitle}>Kontak Darurat Tersimpan</Text>
             <Text style={styles.contactDesc}>
-              {daftarNomor.length > 0 
-                ? `${daftarNomor.length} kontak siap dihubungi saat darurat.` 
+              {daftarNomor.length > 0
+                ? `${daftarNomor.length} kontak siap dihubungi saat darurat.`
                 : 'Belum ada kontak. Harap isi sekarang!'}
             </Text>
           </View>
@@ -493,14 +521,14 @@ export default function HomeScreen() {
                 <Text style={styles.btnCloseText}>Tutup</Text>
               </TouchableOpacity>
             </View>
-            
+
             {pushNotifications.length === 0 ? (
-              <Text style={styles.emptyNotif}>Belum ada notifikasi baru.</Text>
+              <Text style={styles.emptyNotif}>Belum ada notifikasi.</Text>
             ) : (
-              <FlatList 
+              <FlatList
                 data={pushNotifications}
                 keyExtractor={(item) => item.id}
-                renderItem={({item}) => (
+                renderItem={({ item }) => (
                   <View style={styles.notifItem}>
                     <Text style={styles.notifTitle}>{item.title}</Text>
                     <Text style={styles.notifBody}>{item.body}</Text>
@@ -528,8 +556,7 @@ export default function HomeScreen() {
                     width: progressWidth.interpolate({
                       inputRange: [0, 100],
                       outputRange: ['0%', '100%']
-                    }
-                    )
+                    })
                   }
                 ]}
               />
@@ -562,9 +589,9 @@ const styles = StyleSheet.create({
   topbarName: { fontWeight: '700', color: '#0f172a' },
   topbarIcon: { position: 'relative', padding: 4 },
   notifDot: { position: 'absolute', width: 10, height: 10, backgroundColor: '#ef4444', borderRadius: 5, top: 2, right: 4, borderWidth: 1.5, borderColor: '#fff' },
-  
+
   body: { padding: 20 },
-  
+
   infoCard: { backgroundColor: '#ecfdf5', padding: 16, borderRadius: 12, marginBottom: 20, borderWidth: 1, borderColor: '#d1fae5' },
   infoHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
   infoTitle: { marginLeft: 8, fontSize: 14, fontWeight: '600', color: '#065f46' },
@@ -596,7 +623,7 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 18, fontWeight: '700', color: '#0f172a' },
   modalTitleSOS: { fontSize: 18, fontWeight: '700', color: '#0f172a', textAlign: 'center' },
   btnCloseText: { fontSize: 14, color: '#0284c7', fontWeight: '600' },
-  
+
   emptyNotif: { textAlign: 'center', color: '#94a3b8', marginTop: 20 },
   notifItem: { backgroundColor: '#f8fafc', padding: 16, borderRadius: 12, marginBottom: 10 },
   notifTitle: { fontSize: 14, fontWeight: '700', color: '#1e293b', marginBottom: 4 },
@@ -608,7 +635,7 @@ const styles = StyleSheet.create({
   modalProgressBar: { height: '100%', backgroundColor: '#dc2626' },
   btnCancel: { padding: 16, backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 12, alignItems: 'center' },
   btnCancelText: { fontWeight: '700', color: '#475569', fontSize: 15 },
-  
+
   toast: { position: 'absolute', top: 60, alignSelf: 'center', backgroundColor: '#1e293b', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 30, elevation: 4 },
   toastText: { color: '#fff', fontSize: 13, fontWeight: '500' },
 });

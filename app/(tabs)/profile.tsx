@@ -10,7 +10,6 @@ import {
   LogOut,
   MapPin,
   Shield,
-  Star,
   X,
 } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
@@ -29,27 +28,25 @@ import {
   View
 } from 'react-native';
 
-// INTEGRASI SUPABASE
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { supabase } from '../../lib/supabase'; // <-- PASTIKAN PATH INI SESUAI DENGAN LOKASI SUPABASE CLIENT ANDA
+import { supabase } from '../../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { fetchUserProfile } from '../database/repository';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { session } = useAuth(); // Cukup ambil session, hapus signOut / logout dari destructuring hook ini
+  const { session } = useAuth();
 
-  // State Data Profil
   const [namaMahasiswa, setNamaMahasiswa] = useState('Nama Mahasiswa');
   const [npmMahasiswa, setNpmMahasiswa] = useState('-');
   const [prodiMahasiswa, setProdiMahasiswa] = useState('-');
 
-  // State Fitur & Izin
   const [isGpsEnabled, setIsGpsEnabled] = useState(false);
   const [isNotificationEnabled, setIsNotificationEnabled] = useState(false);
   const [isTemplateModalVisible, setIsTemplateModalVisible] = useState(false);
+  const [isPrivacyModalVisible, setIsPrivacyModalVisible] = useState(false);
+  const [isFaqModalVisible, setIsFaqModalVisible] = useState(false);
 
-  // Fungsi mengecek izin langsung dari OS
   const cekStatusIzin = async () => {
     try {
       const { status: gpsStatus } = await Location.getForegroundPermissionsAsync();
@@ -81,7 +78,6 @@ export default function ProfileScreen() {
       muatProfilDariSupabase();
       cekStatusIzin();
 
-      // Listener: Jika user kembali dari Pengaturan HP, cek ulang izinnya otomatis
       const subscription = AppState.addEventListener('change', (state) => {
         if (state === 'active') cekStatusIzin();
       });
@@ -90,7 +86,6 @@ export default function ProfileScreen() {
     }, [session])
   );
 
-  // Mencegah error jika string nama kosong atau hanya berisi spasi
   const getAvatarText = (nama: string) => {
     if (!nama || nama === 'Nama Mahasiswa') return '--';
     const parts = nama.trim().split(/\s+/);
@@ -98,7 +93,6 @@ export default function ProfileScreen() {
     return nama.substring(0, 2).toUpperCase();
   };
 
-  // Handler Izin GPS
   const handleToggleGps = async (val: boolean) => {
     if (val) {
       const { status, canAskAgain } = await Location.requestForegroundPermissionsAsync();
@@ -128,7 +122,6 @@ export default function ProfileScreen() {
     }
   };
 
-  // Handler Izin Notifikasi
   const handleToggleNotifikasi = async (val: boolean) => {
     if (val) {
       const { status, canAskAgain } = await Notifications.requestPermissionsAsync();
@@ -158,7 +151,6 @@ export default function ProfileScreen() {
     }
   };
 
-  // Handler Keluar Akun
   const handleLogout = () => {
     Alert.alert(
       'Keluar Akun',
@@ -170,10 +162,8 @@ export default function ProfileScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              // Memanggil langsung dari instance auth Supabase client tanpa lewat context
               const { error } = await supabase.auth.signOut();
               if (error) throw error;
-              
               router.replace('/login');
             } catch (error) {
               Alert.alert('Error', 'Gagal melakukan proses logout.');
@@ -187,15 +177,13 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
-      
-      {/* Topbar */}
+
       <View style={styles.topbar}>
         <Text style={styles.topbarTitle}>Profil & Pengaturan</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollBody} showsVerticalScrollIndicator={false}>
-        
-        {/* Profile Gradient Card */}
+
         <LinearGradient
           colors={['#B91C1C', '#7f1d1d']}
           start={{ x: 0, y: 0 }}
@@ -252,7 +240,6 @@ export default function ProfileScreen() {
         <Text style={styles.sectionHeader}>Pengiriman SOS</Text>
         <View style={styles.settingGroup}>
           <TouchableOpacity
-            key="template-sos"
             style={styles.settingItem}
             activeOpacity={0.7}
             onPress={() => setIsTemplateModalVisible(true)}
@@ -270,7 +257,11 @@ export default function ProfileScreen() {
         {/* Section: Lainnya */}
         <Text style={styles.sectionHeader}>Lainnya</Text>
         <View style={styles.settingGroup}>
-          <TouchableOpacity key="privacy-policy" style={styles.settingItem} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.settingItem}
+            activeOpacity={0.7}
+            onPress={() => setIsPrivacyModalVisible(true)}
+          >
             <View style={[styles.settingIcon, styles.siGray]}>
               <Shield size={16} color="#6b7280" />
             </View>
@@ -280,7 +271,11 @@ export default function ProfileScreen() {
             <ChevronRight size={14} color="#ddd" />
           </TouchableOpacity>
 
-          <TouchableOpacity key="faq-help" style={styles.settingItem} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.settingItem}
+            activeOpacity={0.7}
+            onPress={() => setIsFaqModalVisible(true)}
+          >
             <View style={[styles.settingIcon, styles.siGray]}>
               <HelpCircle size={16} color="#6b7280" />
             </View>
@@ -289,25 +284,13 @@ export default function ProfileScreen() {
             </View>
             <ChevronRight size={14} color="#ddd" />
           </TouchableOpacity>
-
-          <TouchableOpacity key="review-app" style={styles.settingItem} activeOpacity={0.7}>
-            <View style={[styles.settingIcon, styles.siGray]}>
-              <Star size={16} color="#6b7280" />
-            </View>
-            <View style={styles.settingLabel}>
-              <Text style={styles.settingText}>Beri Ulasan</Text>
-            </View>
-            <ChevronRight size={14} color="#ddd" />
-          </TouchableOpacity>
         </View>
 
-        {/* Logout Button */}
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.8}>
           <LogOut size={16} color="#B91C1C" />
           <Text style={styles.logoutBtnText}>Keluar dari akun</Text>
         </TouchableOpacity>
 
-        {/* Version Footer */}
         <Text style={styles.versionText}>PanicButtonApp v1.0.0 · © 2026</Text>
       </ScrollView>
 
@@ -320,7 +303,6 @@ export default function ProfileScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            {/* Modal Header */}
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Template Pesan SOS</Text>
               <TouchableOpacity onPress={() => setIsTemplateModalVisible(false)} style={styles.modalCloseBtn}>
@@ -332,16 +314,11 @@ export default function ProfileScreen() {
               Pesan ini akan otomatis dikirim ke semua kontak darurat kamu saat tombol SOS ditekan.
             </Text>
 
-            {/* WhatsApp-style bubble */}
             <View style={styles.waBubbleWrapper}>
               <View style={styles.waBubble}>
                 <Text style={styles.waBubbleText}>
-  [DARURAT - PANIC BUTTON UNILA]{'\n\n'}
-  Saya membutuhkan bantuan segera!{'\n\n'}
-  Nama: {namaMahasiswa}{'\n'}NPM: {npmMahasiswa}{'\n'}Prodi: {prodiMahasiswa}{'\n\n'}
-  Lokasi saya: [Alamat GPS]{'\n'}
-  Koordinat: https://maps.google.com/?q=[koordinat]
-</Text>
+                  [DARURAT - PANIC BUTTON UNILA]{'\n\n'}Saya membutuhkan bantuan segera!{'\n\n'}Nama: {namaMahasiswa}{'\n'}NPM: {npmMahasiswa}{'\n'}Prodi: {prodiMahasiswa}{'\n\n'}Lokasi saya: [Alamat GPS]{'\n'}Koordinat: https://maps.google.com/?q=[koordinat]
+                </Text>
                 <Text style={styles.waBubbleTime}>✓✓ Terkirim</Text>
               </View>
             </View>
@@ -349,14 +326,127 @@ export default function ProfileScreen() {
             <Text style={styles.modalNote}>
               ℹ️ Lokasi dan koordinat akan otomatis terisi saat pesan dikirim.
             </Text>
+          </View>
+        </View>
+      </Modal>
 
-            <TouchableOpacity
-              style={styles.modalCloseFooterBtn}
-              onPress={() => setIsTemplateModalVisible(false)}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.modalCloseFooterText}>Tutup</Text>
-            </TouchableOpacity>
+      {/* MODAL KEBIJAKAN PRIVASI */}
+      <Modal
+        visible={isPrivacyModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setIsPrivacyModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, styles.modalContentTall]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Kebijakan Privasi</Text>
+              <TouchableOpacity onPress={() => setIsPrivacyModalVisible(false)} style={styles.modalCloseBtn}>
+                <X size={20} color="#64748b" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Text style={styles.privacySection}>1. Informasi yang Kami Kumpulkan</Text>
+              <Text style={styles.privacyText}>
+                PanicButtonApp mengumpulkan informasi yang Anda berikan saat mendaftar, termasuk nama lengkap, NPM, program studi, dan nomor kontak darurat. Aplikasi juga mengakses data lokasi GPS perangkat Anda secara real-time hanya saat fitur SOS diaktifkan.
+              </Text>
+
+              <Text style={styles.privacySection}>2. Penggunaan Informasi</Text>
+              <Text style={styles.privacyText}>
+                Informasi yang dikumpulkan digunakan semata-mata untuk mengirimkan pesan darurat kepada kontak yang telah Anda daftarkan. Data lokasi hanya digunakan pada saat tombol SOS ditekan dan tidak disimpan secara terus-menerus.
+              </Text>
+
+              <Text style={styles.privacySection}>3. Penyimpanan Data</Text>
+              <Text style={styles.privacyText}>
+                Data profil dan riwayat pengiriman SOS disimpan secara aman di server menggunakan layanan Supabase dengan enkripsi standar industri. Kami tidak menjual atau membagikan data Anda kepada pihak ketiga manapun.
+              </Text>
+
+              <Text style={styles.privacySection}>4. Keamanan Data</Text>
+              <Text style={styles.privacyText}>
+                Kami menerapkan langkah-langkah keamanan teknis dan organisasi yang wajar untuk melindungi data pribadi Anda dari akses, pengungkapan, perubahan, atau penghancuran yang tidak sah.
+              </Text>
+
+              <Text style={styles.privacySection}>5. Hak Pengguna</Text>
+<Text style={styles.privacyText}>
+  Data profil yang telah didaftarkan bersifat permanen dan tidak dapat diubah atau dihapus secara mandiri oleh pengguna. Hal ini bertujuan untuk menjaga keakuratan identitas pengguna dalam situasi darurat. Jika terdapat kesalahan data, silakan hubungi administrator atau tim pengembang aplikasi untuk penanganan lebih lanjut.
+</Text>
+
+              <Text style={styles.privacySection}>6. Perubahan Kebijakan</Text>
+              <Text style={styles.privacyText}>
+                Kami dapat memperbarui kebijakan privasi ini sewaktu-waktu. Perubahan signifikan akan diberitahukan melalui notifikasi dalam aplikasi. Dengan terus menggunakan aplikasi, Anda menyetujui kebijakan yang berlaku.
+              </Text>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* MODAL BANTUAN & FAQ */}
+      <Modal
+        visible={isFaqModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setIsFaqModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, styles.modalContentTall]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Bantuan & FAQ</Text>
+              <TouchableOpacity onPress={() => setIsFaqModalVisible(false)} style={styles.modalCloseBtn}>
+                <X size={20} color="#64748b" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={styles.faqItem}>
+                <Text style={styles.faqQuestion}>Bagaimana cara menggunakan tombol SOS?</Text>
+                <Text style={styles.faqAnswer}>
+                  Tekan tombol SOS merah di halaman beranda. Sistem akan menghitung mundur selama 3 detik sebelum mengirim pesan darurat. Anda dapat membatalkan pengiriman selama hitungan mundur berlangsung.
+                </Text>
+              </View>
+
+              <View style={styles.faqItem}>
+                <Text style={styles.faqQuestion}>Kenapa pesan SOS saya gagal terkirim?</Text>
+                <Text style={styles.faqAnswer}>
+                  Pesan SOS membutuhkan koneksi internet aktif untuk dikirim melalui WhatsApp. Pastikan HP Anda terhubung ke jaringan WiFi atau data seluler saat menggunakan fitur ini.
+                </Text>
+              </View>
+
+              <View style={styles.faqItem}>
+                <Text style={styles.faqQuestion}>Bagaimana cara menambah kontak darurat?</Text>
+                <Text style={styles.faqAnswer}>
+                  Buka menu Kontak Darurat di bagian bawah layar, lalu tekan tombol tambah (+). Isi nama, nomor telepon, dan hubungan kontak, kemudian simpan. Kontak yang ditambahkan akan menerima pesan SOS saat tombol ditekan.
+                </Text>
+              </View>
+
+              <View style={styles.faqItem}>
+                <Text style={styles.faqQuestion}>Apakah GPS harus selalu aktif?</Text>
+                <Text style={styles.faqAnswer}>
+                  GPS tidak harus selalu aktif, namun sangat disarankan agar lokasi Anda dapat terdeteksi dengan akurat saat mengirim SOS. Aktifkan GPS sebelum menggunakan fitur panic button untuk hasil terbaik.
+                </Text>
+              </View>
+
+              <View style={styles.faqItem}>
+                <Text style={styles.faqQuestion}>Berapa banyak kontak darurat yang bisa didaftarkan?</Text>
+                <Text style={styles.faqAnswer}>
+                  Anda dapat mendaftarkan hingga beberapa kontak darurat sekaligus. Semua kontak yang terdaftar akan menerima pesan SOS secara bersamaan saat tombol ditekan.
+                </Text>
+              </View>
+
+              <View style={styles.faqItem}>
+                <Text style={styles.faqQuestion}>Bagaimana cara melihat riwayat pengiriman SOS?</Text>
+                <Text style={styles.faqAnswer}>
+                  Buka menu Riwayat di bagian bawah layar. Di sana Anda dapat melihat seluruh catatan pengiriman SOS beserta status, waktu, lokasi, dan kontak yang dihubungi.
+                </Text>
+              </View>
+
+              <View style={styles.faqItem}>
+                <Text style={styles.faqQuestion}>Apa yang dimaksud status "Terkirim Sebagian"?</Text>
+                <Text style={styles.faqAnswer}>
+                  Status ini muncul ketika pesan SOS berhasil dikirim ke sebagian kontak darurat, namun gagal ke kontak lainnya. Cek koneksi internet atau pastikan nomor kontak yang didaftarkan sudah benar dan aktif di WhatsApp.
+                </Text>
+              </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -392,17 +482,25 @@ const styles = StyleSheet.create({
   logoutBtn: { marginHorizontal: 20, marginTop: 16, marginBottom: 20, padding: 14, borderRadius: 12, borderWidth: 1.5, borderColor: '#fecaca', backgroundColor: '#fff', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   logoutBtnText: { fontSize: 14, fontWeight: '600', color: '#B91C1C', marginLeft: 6 },
   versionText: { textAlign: 'center', fontSize: 11, color: '#ddd', paddingBottom: 24 },
+
   modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(15, 23, 42, 0.6)' },
   modalContent: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: Platform.OS === 'ios' ? 40 : 28 },
+  modalContentTall: { maxHeight: '80%' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   modalTitle: { fontSize: 16, fontWeight: '700', color: '#0f172a' },
   modalCloseBtn: { padding: 4 },
   modalSubtitle: { fontSize: 12, color: '#64748b', lineHeight: 18, marginBottom: 20 },
+
   waBubbleWrapper: { backgroundColor: '#e5ddd5', borderRadius: 12, padding: 16, marginBottom: 14 },
   waBubble: { backgroundColor: '#dcf8c6', borderRadius: 10, borderTopRightRadius: 2, padding: 12, alignSelf: 'flex-end', maxWidth: '95%', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 2, elevation: 1 },
   waBubbleText: { fontSize: 13, color: '#1a1a1a', lineHeight: 20 },
   waBubbleTime: { fontSize: 10, color: '#4fc3f7', textAlign: 'right', marginTop: 6 },
-  modalNote: { fontSize: 11, color: '#94a3b8', lineHeight: 16, marginBottom: 20 },
-  modalCloseFooterBtn: { backgroundColor: '#f1f5f9', borderRadius: 12, padding: 14, alignItems: 'center' },
-  modalCloseFooterText: { fontSize: 14, fontWeight: '600', color: '#475569' },
+  modalNote: { fontSize: 11, color: '#94a3b8', lineHeight: 16 },
+
+  privacySection: { fontSize: 13, fontWeight: '700', color: '#1a1a1a', marginTop: 16, marginBottom: 6 },
+  privacyText: { fontSize: 13, color: '#475569', lineHeight: 20 },
+
+  faqItem: { paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
+  faqQuestion: { fontSize: 13, fontWeight: '700', color: '#1a1a1a', marginBottom: 6 },
+  faqAnswer: { fontSize: 13, color: '#475569', lineHeight: 20 },
 });

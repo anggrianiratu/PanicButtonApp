@@ -13,7 +13,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { fetchContacts } from '../database/repository';
 
-// Interface disesuaikan dengan tipe kolom SQLite Anda
 export interface Contact {
   id: number;
   user_id: string;
@@ -35,14 +34,9 @@ export default function ContactScreen() {
       const loadContacts = async () => {
         try {
           const storedContacts = await fetchContacts();
-
           setContactsData(storedContacts as Contact[]);
         } catch (error) {
-          console.error(
-            'Gagal memuat kontak dari Supabase:',
-            error
-          );
-
+          console.error('Gagal memuat kontak dari Supabase:', error);
           setContactsData([]);
         }
       };
@@ -51,7 +45,6 @@ export default function ContactScreen() {
     }, [])
   );
 
-  // Navigasi Type-Safe Expo Router tanpa "as any"
   const handleNavigateToForm = (contactId?: string) => {
     if (contactId) {
       router.push({
@@ -99,7 +92,7 @@ export default function ContactScreen() {
               {item.initials ?? '?'}
             </Text>
           </View>
-          
+
           <View style={styles.contactInfo}>
             <Text style={styles.contactName} numberOfLines={1}>{item.name}</Text>
             <Text style={styles.contactRole} numberOfLines={1}>{item.role ?? item.relation}</Text>
@@ -118,19 +111,14 @@ export default function ContactScreen() {
     );
   };
 
+  const hasContacts = contactsData.length > 0;
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
       <View style={styles.topbar}>
         <Text style={styles.topbarTitle}>Kontak Darurat</Text>
-        <TouchableOpacity 
-          style={styles.addBtnTop} 
-          onPress={() => handleNavigateToForm()}
-          activeOpacity={0.8}
-        >
-          <Plus size={16} color="#fff" />
-        </TouchableOpacity>
       </View>
 
       <FlatList
@@ -140,7 +128,7 @@ export default function ContactScreen() {
         contentContainerStyle={styles.listBody}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
-          contactsData.length > 0 ? (
+          hasContacts ? (
             <View style={styles.infoBanner}>
               <Info size={14} color="#991b1b" style={styles.infoIcon} />
               <Text style={styles.infoText}>
@@ -149,35 +137,52 @@ export default function ContactScreen() {
             </View>
           ) : null
         }
-        ListFooterComponent={
-          <TouchableOpacity 
-            style={styles.addBtnBottom} 
-            onPress={() => handleNavigateToForm()}
-            activeOpacity={0.7}
-          >
-            <Plus size={16} color="#B91C1C" />
-            <Text style={styles.addBtnBottomText}>Tambah kontak darurat baru</Text>
-          </TouchableOpacity>
-        }
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Info size={40} color="#e5e5e5" />
-            <Text style={{ fontSize: 13, color: '#bbb', textAlign: 'center', marginTop: 8 }}>
+            <Text style={styles.emptyText}>
               Belum ada kontak darurat terdaftar.
             </Text>
+            <TouchableOpacity
+              style={styles.addBtnEmpty}
+              onPress={() => handleNavigateToForm()}
+              activeOpacity={0.7}
+            >
+              <Plus size={16} color="#B91C1C" />
+              <Text style={styles.addBtnEmptyText}>Tambah kontak darurat baru</Text>
+            </TouchableOpacity>
           </View>
         }
       />
+
+      {hasContacts && (
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={() => handleNavigateToForm()}
+          activeOpacity={0.85}
+        >
+          <Plus size={22} color="#fff" />
+        </TouchableOpacity>
+      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
-  topbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: Platform.OS === 'android' ? 15 : 10, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
-  topbarTitle: { fontSize: 16, fontWeight: '600', color: '#1a1a1a' },
-  addBtnTop: { width: 34, height: 34, backgroundColor: '#B91C1C', borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
-  listBody: { paddingBottom: 40, paddingTop: 14, flexGrow: 1 },
+// Ganti ini di StyleSheet contact.tsx:
+topbar: { 
+  flexDirection: 'row', 
+  alignItems: 'center', 
+  justifyContent: 'space-between', 
+  paddingHorizontal: 20, 
+  paddingTop: Platform.OS === 'android' ? 15 : 10, 
+  paddingBottom: 12, 
+  borderBottomWidth: 1, 
+  borderBottomColor: '#f0f0f0' 
+},
+topbarTitle: { fontSize: 16, fontWeight: '600', color: '#1a1a1a' },
+  listBody: { paddingBottom: 100, paddingTop: 14, flexGrow: 1 },
   infoBanner: { marginHorizontal: 20, marginBottom: 12, backgroundColor: '#fff5f5', borderColor: '#fecaca', borderWidth: 1, borderRadius: 10, padding: 10, flexDirection: 'row', alignItems: 'center' },
   infoIcon: { marginRight: 8 },
   infoText: { fontSize: 11, color: '#991b1b' },
@@ -199,7 +204,9 @@ const styles = StyleSheet.create({
   badge2: { backgroundColor: '#fef9c3' },
   badge3: { backgroundColor: '#f3f4f6' },
   chevron: { marginLeft: 4 },
-  addBtnBottom: { marginHorizontal: 20, marginTop: 12, borderWidth: 1.5, borderColor: '#e5e5e5', borderStyle: 'dashed', borderRadius: 12, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  addBtnBottomText: { fontSize: 13, color: '#aaa', marginLeft: 6, fontWeight: '500' },
   emptyState: { alignItems: 'center', paddingVertical: 40, paddingHorizontal: 24 },
+  emptyText: { fontSize: 13, color: '#bbb', textAlign: 'center', marginTop: 8 },
+  addBtnEmpty: { marginTop: 20, borderWidth: 1.5, borderColor: '#e5e5e5', borderStyle: 'dashed', borderRadius: 12, paddingVertical: 14, paddingHorizontal: 24, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  addBtnEmptyText: { fontSize: 13, color: '#aaa', marginLeft: 6, fontWeight: '500' },
+  fab: { position: 'absolute', bottom: 28, right: 24, width: 56, height: 56, backgroundColor: '#B91C1C', borderRadius: 28, alignItems: 'center', justifyContent: 'center', shadowColor: '#B91C1C', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 8, elevation: 8 },
 });
