@@ -1,7 +1,9 @@
+
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Inbox, MapPin, Sliders, X } from 'lucide-react-native';
+import { Inbox, MapPin, Sliders, Trash2, X } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
+  Alert,
   Modal,
   Platform,
   ScrollView,
@@ -161,6 +163,34 @@ export default function HistoryScreen() {
     }
   };
 
+  const handleHapusSemuaRiwayat = () => {
+    Alert.alert(
+      'Hapus Semua Riwayat',
+      'Apakah Anda yakin ingin menghapus seluruh riwayat SOS secara permanen?',
+      [
+        { text: 'Batal', style: 'cancel' },
+        {
+          text: 'Hapus Semua',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { error } = await supabase
+                .from('sos_history')
+                .delete()
+                .eq('user_id', session?.user?.id);
+
+              if (error) throw error;
+              setHistoryData([]);
+            } catch (error) {
+              Alert.alert('Error', 'Gagal menghapus riwayat.');
+              console.error(error);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
@@ -168,12 +198,22 @@ export default function HistoryScreen() {
       {/* Topbar Layout */}
       <View style={styles.topbar}>
         <Text style={styles.topbarTitle}>Riwayat SOS</Text>
-        <TouchableOpacity 
-          onPress={() => setIsFilterModalVisible(true)}
-          style={[styles.filterBtn, selectedMonthFilter !== 'Semua' && styles.filterBtnActive]}
-        >
-          <Sliders size={18} color={selectedMonthFilter !== 'Semua' ? '#B91C1C' : '#aaa'} />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          {historyData.length > 0 && (
+            <TouchableOpacity
+              onPress={handleHapusSemuaRiwayat}
+              style={styles.filterBtn}
+            >
+              <Trash2 size={18} color="#ef4444" />
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity 
+            onPress={() => setIsFilterModalVisible(true)}
+            style={[styles.filterBtn, selectedMonthFilter !== 'Semua' && styles.filterBtnActive]}
+          >
+            <Sliders size={18} color={selectedMonthFilter !== 'Semua' ? '#B91C1C' : '#aaa'} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Filter Tabs Component */}
