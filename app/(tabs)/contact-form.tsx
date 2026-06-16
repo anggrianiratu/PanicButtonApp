@@ -1,7 +1,7 @@
 import { Picker } from '@react-native-picker/picker';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Trash2 } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   Platform,
@@ -29,18 +29,20 @@ export default function ContactFormScreen() {
   const [initials, setInitials] = useState('--');
   const [existingTheme, setExistingTheme] = useState<'red' | 'blue' | 'green' | 'amber'>('red');
 
-  useEffect(() => {
-    if (id && id.trim() !== '') {
-      loadExistingContact(id);
-    } else {
-      setFullName('');
-      setPhoneNumber('');
-      setRelation('Keluarga');
-      setPriority('3');
-      setInitials('--');
-      setExistingTheme('red');
-    }
-  }, [id]);
+  useFocusEffect(
+    useCallback(() => {
+      if (id && id.trim() !== '') {
+        loadExistingContact(id);
+      } else {
+        setFullName('');
+        setPhoneNumber('');
+        setRelation('Keluarga');
+        setPriority('3');
+        setInitials('--');
+        setExistingTheme('red');
+      }
+    }, [id])
+  );
 
   useEffect(() => {
     const trimmed = fullName.trim();
@@ -305,7 +307,7 @@ const styles = StyleSheet.create({
   fieldLabel: { fontSize: 11, fontWeight: '600', color: '#888', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 },
   fieldInput: { width: '100%', paddingVertical: 12, paddingHorizontal: 14, borderWidth: 1.5, borderColor: '#f0f0f0', borderRadius: 10, fontSize: 14, color: '#1a1a1a', backgroundColor: '#fafafa' },
   selectWrap: { borderWidth: 1.5, borderColor: '#f0f0f0', borderRadius: 10, backgroundColor: '#fafafa', overflow: 'hidden', justifyContent: 'center' },
-  fieldSelect: { width: '100%', ...Platform.select({ ios: { height: 120 }, android: { height: 50 } }) },
+  fieldSelect: { width: '100%', height: 50 },
   radioGroup: { flexDirection: 'row', gap: 8 },
   radioOpt: { flex: 1, paddingVertical: 10, borderWidth: 1.5, borderColor: '#f0f0f0', borderRadius: 10, backgroundColor: '#fafafa', alignItems: 'center', justifyContent: 'center' },
   radioOptSelected: { borderColor: '#B91C1C', backgroundColor: '#fff5f5' },
