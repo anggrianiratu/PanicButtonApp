@@ -169,6 +169,16 @@ export default function HomeScreen() {
     }
   };
 
+  const hapusSemuaNotifikasi = async () => {
+    try {
+      await AsyncStorage.removeItem(NOTIF_STORAGE_KEY);
+      setPushNotifications([]);
+      setHasUnread(false);
+    } catch (e) {
+      console.error('Gagal menghapus notifikasi:', e);
+    }
+  };
+
   // Sinkronisasi data real-time dari Supabase setiap kali layar mendapat fokus
   useFocusEffect(
     useCallback(() => {
@@ -517,9 +527,16 @@ export default function HomeScreen() {
           <View style={[styles.modalContent, { height: '60%' }]}>
             <View style={styles.sheetHeader}>
               <Text style={styles.modalTitle}>Notifikasi</Text>
-              <TouchableOpacity onPress={() => setIsNotifVisible(false)}>
-                <Text style={styles.btnCloseText}>Tutup</Text>
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+                {pushNotifications.length > 0 && (
+                  <TouchableOpacity onPress={hapusSemuaNotifikasi}>
+                    <Text style={styles.btnClearText}>Hapus Semua</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity onPress={() => setIsNotifVisible(false)}>
+                  <Text style={styles.btnCloseText}>Tutup</Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
             {pushNotifications.length === 0 ? (
@@ -582,6 +599,7 @@ export default function HomeScreen() {
 
 /* ===================== STYLES ===================== */
 const styles = StyleSheet.create({
+  btnClearText: { fontSize: 14, color: '#ef4444', fontWeight: '600' },
   container: { flex: 1, backgroundColor: '#f8fafc' },
   topbar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
   dateText: { fontSize: 12, color: '#64748b', marginBottom: 4 },

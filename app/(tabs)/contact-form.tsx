@@ -146,7 +146,7 @@ export default function ContactFormScreen() {
       Alert.alert('Berhasil', 'Kontak berhasil disimpan!', [
         {
           text: 'OK',
-          onPress: () => router.back(),
+          onPress: () => router.push('/contact'),
         },
       ]);
     } catch (error: any) {
@@ -182,7 +182,7 @@ export default function ContactFormScreen() {
                 if (error) throw error;
               }
 
-              router.back();
+              router.push('/contact');
             } catch (error) {
               Alert.alert(
                 'Error',
@@ -202,7 +202,7 @@ export default function ContactFormScreen() {
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
       
       <View style={styles.topbar}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.push('/contact')}>
           <ArrowLeft size={20} color="#1a1a1a" />
         </TouchableOpacity>
         <Text style={styles.topbarTitle}>{id ? 'Edit Kontak' : 'Tambah Kontak'}</Text>
