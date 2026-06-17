@@ -235,7 +235,7 @@ export default function ContactFormScreen() {
           <Text style={styles.fieldLabel}>Nomor Telepon</Text>
           <TextInput
             style={styles.fieldInput}
-            placeholder="+62 8xx-xxxx-xxxx"
+            placeholder="+62 xx-xxxx-xxxx"
             placeholderTextColor="#ccc"
             value={phoneNumber}
             onChangeText={setPhoneNumber}
